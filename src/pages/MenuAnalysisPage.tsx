@@ -1,88 +1,63 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { 
-  Box, 
-  CircularProgress, 
-  Typography, 
-  TextField,
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  CircularProgress,
+  Typography,
   Button,
-  Paper,
   Alert,
   Card,
   CardMedia,
-} from '@mui/material'
-import { analyzeMenu } from '../services/menuService'
-import { dataService } from '../services/dataService'
-
-const API_KEY_STORAGE_KEY = 'openai_api_key'
+} from '@mui/material';
+import { analyzeMenu } from '../services/menuService';
+import { dataService } from '../services/dataService';
 
 const MenuAnalysisPage = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [error, setError] = useState<string | null>(null)
-  const [apiKey, setApiKey] = useState<string>('')
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [showApiInput, setShowApiInput] = useState(false)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const image = location.state?.image as File
+    const image = location.state?.image as File;
     if (image) {
-      // Create preview URL for the image
-      const previewUrl = URL.createObjectURL(image)
-      setImagePreview(previewUrl)
-      
-      // Cleanup preview URL when component unmounts
-      return () => URL.revokeObjectURL(previewUrl)
-    }
-  }, [location.state?.image])
+      const previewUrl = URL.createObjectURL(image);
+      setImagePreview(previewUrl);
+      startAnalysis(image);
 
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY)
-    if (storedApiKey) {
-      setApiKey(storedApiKey)
-      startAnalysis(storedApiKey)
+      return () => URL.revokeObjectURL(previewUrl);
     } else {
-      setShowApiInput(true)
+      navigate('/');
     }
-  }, [])
+  }, [location.state?.image, navigate]);
 
-  const startAnalysis = async (key: string) => {
+  const startAnalysis = async (image: File) => {
     try {
-      setIsAnalyzing(true)
-      setError(null)
-      const image = location.state?.image
-      
-      if (!image) {
-        throw new Error('No image provided')
-      }
+      setIsAnalyzing(true);
+      setError(null);
 
-      const menuData = await analyzeMenu(image, key)
-      localStorage.setItem(API_KEY_STORAGE_KEY, key)
-      await dataService.setMenuData(menuData)
-      navigate('/menu')
+      const menuData = await analyzeMenu(image);
+      await dataService.setMenuData(menuData);
+      navigate('/menu');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-      setError(errorMessage)
-      if (errorMessage.includes('API key')) {
-        setShowApiInput(true)
-        localStorage.removeItem(API_KEY_STORAGE_KEY)
-      }
+      const errorMessage =
+        err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (apiKey.trim()) {
-      startAnalysis(apiKey.trim())
+  const handleRetry = () => {
+    const image = location.state?.image as File;
+    if (image) {
+      startAnalysis(image);
     }
-  }
+  };
 
   if (!location.state?.image) {
-    navigate('/')
-    return null
+    return null;
   }
 
   return (
@@ -97,38 +72,7 @@ const MenuAnalysisPage = () => {
         gap: 4,
       }}
     >
-      {showApiInput ? (
-        <Paper 
-          component="form" 
-          onSubmit={handleSubmit}
-          sx={{ p: 3, width: '100%', maxWidth: 400 }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Enter OpenAI API Key
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Your API key will be stored locally for future use
-          </Typography>
-          <TextField
-            fullWidth
-            label="API Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            type="password"
-            error={!!error}
-            helperText={error}
-            sx={{ mb: 2 }}
-          />
-          <Button 
-            fullWidth 
-            variant="contained" 
-            type="submit"
-            disabled={!apiKey.trim() || isAnalyzing}
-          >
-            {isAnalyzing ? 'Analyzing...' : 'Analyze Menu'}
-          </Button>
-        </Paper>
-      ) : isAnalyzing ? (
+      {isAnalyzing ? (
         <>
           <Box sx={{ textAlign: 'center' }}>
             <CircularProgress size={60} />
@@ -137,12 +81,12 @@ const MenuAnalysisPage = () => {
             </Typography>
           </Box>
           {imagePreview && (
-            <Card 
-              sx={{ 
-                maxWidth: 400, 
+            <Card
+              sx={{
+                maxWidth: 400,
                 width: '100%',
                 overflow: 'hidden',
-                opacity: 0.8, // Slightly dim the image during analysis
+                opacity: 0.8,
                 transition: 'opacity 0.3s ease',
               }}
             >
@@ -161,17 +105,10 @@ const MenuAnalysisPage = () => {
           )}
         </>
       ) : error ? (
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           action={
-            <Button 
-              color="inherit" 
-              size="small"
-              onClick={() => {
-                setError(null)
-                setShowApiInput(true)
-              }}
-            >
+            <Button color="inherit" size="small" onClick={handleRetry}>
               Try Again
             </Button>
           }
@@ -180,7 +117,7 @@ const MenuAnalysisPage = () => {
         </Alert>
       ) : null}
     </Box>
-  )
-}
+  );
+};
 
-export default MenuAnalysisPage 
+export default MenuAnalysisPage;
