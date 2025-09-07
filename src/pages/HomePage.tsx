@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -18,11 +17,9 @@ const Logo = styled('img')({
 
 const HomePage = () => {
   const navigate = useNavigate()
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
 
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedImage(e.target.files[0])
       navigate('/analysis', { state: { image: e.target.files[0] } })
     }
   }
