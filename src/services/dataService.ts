@@ -71,19 +71,20 @@ class DataService {
 
   private async fetchImagesForDish(item: MenuItem, count: number = 6): Promise<void> {
     try {
-      const response = await fetch(
-        `${CONFIG.GOOGLE_SEARCH_ENDPOINT}?key=${CONFIG.GOOGLE_SEARCH_API_KEY}&cx=${CONFIG.GOOGLE_SEARCH_CX}&q=${encodeURIComponent(item.name + ' photo')}&searchType=image&num=${count}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
-      
-      if (!response.ok) throw new Error('Failed to fetch images');
-      
+      const response = await fetch('http://localhost:3001/api/images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: item.name, count }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch images');
+      }
+
       const data = await response.json();
-      item.imageUrls = data.items?.map((img: any) => img.link) || [];
+      item.imageUrls = data.imageUrls || [];
       this.saveToStorage();
     } catch (error) {
       console.error(`Error fetching images for ${item.name}:`, error);
